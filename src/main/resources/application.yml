@@ -14,6 +14,24 @@ spring:
   flyway:
     enabled: true
 
+app:
+  auth:
+    # Base of the activation link written to the log in place of an email.
+    base-url: ${APP_BASE_URL:http://localhost:8080}
+    activation-token-ttl: 24h
+    password-reset-token-ttl: 15m
+    jwt:
+      # HS256 needs a key of at least 32 bytes. This default only exists so the application starts
+      # out of the box in development and tests: any shared or real deployment must set APP_JWT_SECRET.
+      secret: ${APP_JWT_SECRET:dev-only-jwt-secret-change-me-0123456789abcdef}
+      issuer: spring-modulith-tutorial
+      ttl: 1h
+    # Optional administrator created at startup by AdminBootstrap, only when both variables are set.
+    # There is deliberately no default: without them, no ADMIN account exists.
+    admin:
+      email: ${APP_ADMIN_EMAIL:}
+      password: ${APP_ADMIN_PASSWORD:}
+
 management:
   endpoints:
     web:
