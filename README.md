@@ -246,6 +246,8 @@ public record ApiResponse<T>(
 - [ ] `ActivationToken`, `BlacklistedToken`, `PasswordResetToken` entities and repositories, package-private
 - [ ] `auth.api.AuthApi` (`@NamedInterface`): the only thing other modules are allowed to depend on - a small interface exposing only what's genuinely needed elsewhere (e.g. `boolean userExists(Long userId)`), never the `User` entity itself
 - [ ] `UserService`: registration (creates the user disabled, generates an `ActivationToken`, logs the activation link instead of emailing it, consistent with how outbound notifications are simulated elsewhere in this tutorial series), activation, login (issues a JWT), logout (blacklists the token's `jti`), forgot-password and reset-password
+- [ ] Public routes: register, activate-account, login, forgot-password and reset-password are reachable without a token; logout and me require an authenticated caller. A registered account gets the `USER` role and stays disabled until activated
+- [ ] `AdminBootstrap`: at startup, creates an enabled account with the `ADMIN` role from `APP_ADMIN_EMAIL`/`APP_ADMIN_PASSWORD` when both are set and the account does not exist yet - no default password anywhere in the code or the migrations, and nothing happens when the variables are absent
 - [ ] Enumeration protection: `/auth/forgot-password` returns the identical response regardless of whether the submitted email exists, so the endpoint can't be used to discover registered accounts
 - [ ] `AuthController`
 - [ ] `JwtService`: issues and validates JWTs, checking the token's `jti` against `BlacklistedToken` on every authenticated request
