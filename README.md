@@ -337,13 +337,24 @@ The first module that actually depends on others - this is where a boundary viol
 
 ### Tasks
 
-- [ ] `Order` entity, repository, package-private
-- [ ] `OrderServiceImpl`: depends on `CatalogApi`/`CustomerApi` (injected as the named-interface types, never the internal entities or repositories of those modules) to validate a product/customer exist and to read the product's price. `Order.total` is a **snapshot** taken at order-creation time (`quantity * product.unitPrice` as returned by `CatalogApi` at that moment), stored on the `orders` row itself rather than recalculated later - so a subsequent price change on the product never alters the total of an order already placed
-- [ ] `OrderPlacedEvent` (public - an event is precisely the kind of thing meant to cross a module boundary): published via `ApplicationEventPublisher` after the order is persisted
-- [ ] `OrderController`
-- [ ] A deliberate violation, introduced then immediately removed, as a learning exercise: temporarily import `catalog.Product` directly into `OrderServiceImpl` instead of using `CatalogApi`, run `ModularityTests`, observe it fail with a clear violation message, then revert to the correct dependency - this is meant to be done once, by hand, so the failure message is seen at least once before trusting the test going forward
-- [ ] `@ApplicationModuleTest` for `order`, which by Modulith's own rules will also boot `catalog` and `customer` (its declared dependencies) but not `notification`
-- [ ] `ModularityTests` passes with the real dependency graph: `order → catalog`, `order → customer`
+- [x] `Order` entity, repository, package-private
+- [x] `OrderServiceImpl`: depends on `CatalogApi`/`CustomerApi` (injected as the named-interface types, never the internal entities or repositories of those modules) to validate a product/customer exist and to read the product's price. `Order.total` is a **snapshot** taken at order-creation time (`quantity * product.unitPrice` as returned by `CatalogApi` at that moment), stored on the `orders` row itself rather than recalculated later - so a subsequent price change on the product never alters the total of an order already placed
+- [x] `OrderPlacedEvent` (public - an event is precisely the kind of thing meant to cross a module boundary): published via `ApplicationEventPublisher` after the order is persisted
+- [x] `OrderController`
+- [x] A deliberate violation, introduced then immediately removed, as a learning exercise: temporarily import `catalog.Product` directly into `OrderServiceImpl` instead of using `CatalogApi`, run `ModularityTests`, observe it fail with a clear violation message, then revert to the correct dependency - this is meant to be done once, by hand, so the failure message is seen at least once before trusting the test going forward
+- [x] `@ApplicationModuleTest` for `order`, which by Modulith's own rules will also boot `catalog` and `customer` (its declared dependencies) but not `notification`
+- [x] `ModularityTests` passes with the real dependency graph: `order → catalog`, `order → customer`
+
+### Notes on what was built
+
+- **Declared dependencies**: `order/package-info.java` carries `@ApplicationModule(allowedDependencies = {"catalog :: api", "customer :: api", "common"})`. Without it, the deliberate violation below would pass: Spring Modulith counts the public types of a module's base package (such as `catalog.Product`, public because `catalog/impl/` uses it) as part of that module's unnamed interface. See "Code conventions".
+- **The deliberate violation**, done once by hand and reverted (never committed): adding a `catalog.Product` field and import to `OrderServiceImpl` made `ModularityTests` fail with:
+  `Module 'order' depends on module 'catalog' via com.edgareldy.springmodulithtutorial.order.impl.OrderServiceImpl -> com.edgareldy.springmodulithtutorial.catalog.Product. Allowed targets: catalog :: api, customer :: api, common.`
+- **Entity**: `Order` is mapped as JPA entity `PlacedOrder` on table `orders` (`ORDER` is a reserved word of the query language). `customerId`/`productId` are plain columns, not associations.
+- **Total snapshot**: `quantity * ProductSummary.unitPrice()`, rounded to cents (`HALF_UP`), stored on the row and never recalculated; a test changes the product price in the database and checks that the existing order keeps its total.
+- **Event**: `OrderPlacedEvent(orderId, customerId, productId, quantity, total)` is a public record in the base package of `order`, published with `ApplicationEventPublisher` inside the transaction that persists the order.
+- **Endpoints**: `POST` answers `201` with a `Location` header; an unknown customer or product gives `404`; the list is paginated (`page >= 0`, `size` 1 to 100). Roles are checked literally, without a hierarchy.
+- **Module test**: `OrderModuleTest` runs `@ApplicationModuleTest(mode = DIRECT_DEPENDENCIES)`, asserts that catalog and customer are booted but not notification nor auth, and checks the event with `Scenario` / `AssertablePublishedEvents`.
 
 ## feature/notification-module
 
