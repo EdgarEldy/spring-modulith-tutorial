@@ -6,10 +6,11 @@
  * Date : 9/26/26
  * Project : spring-modulith-tutorial
  */
-// @NamedInterface turns this sub-package into an explicitly exposed part of the catalog module.
-// Once a module declares a named interface, Spring Modulith treats every other package of it
-// (entities, repositories, services, impl, web) as internal, and ApplicationModules.verify() fails
-// if the order module, or any other one, reaches past CatalogApi and ProductSummary.
+// @NamedInterface turns this sub-package into an explicitly exposed part of the catalog module, under
+// the name "api". Sub-packages that are not named interfaces (impl, web) stay internal, but the public
+// types of the base package (the entities and repositories used by impl) still form the module's
+// unnamed interface. A consumer such as order therefore declares allowedDependencies = "catalog :: api":
+// only then does ApplicationModules.verify() fail when it reaches past CatalogApi and ProductSummary.
 @NamedInterface("api")
 package com.edgareldy.springmodulithtutorial.catalog.api;
 
