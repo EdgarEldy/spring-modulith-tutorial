@@ -4,6 +4,7 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import javax.crypto.SecretKey;
@@ -86,7 +87,8 @@ public class JwtService implements JwtDecoder {
      * @return the signed token, with its compact value and expiry
      */
     public Jwt issue(User user) {
-        Instant now = clock.instant();
+        // JWT dates are whole seconds: truncating keeps the returned expiry equal to the signed exp claim.
+        Instant now = clock.instant().truncatedTo(ChronoUnit.SECONDS);
         List<String> roles = user.getRoles().stream().map(Role::getRoleName).sorted().toList();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(settings.issuer())
