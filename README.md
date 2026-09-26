@@ -266,12 +266,22 @@ public record ApiResponse<T>(
 
 ### Tasks
 
-- [ ] `Category`, `Product` entities and their repositories/services, package-private
-- [ ] `catalog.api.CatalogApi` (`@NamedInterface`): exposes what `order` will need later (e.g. `Optional<ProductSummary> findProduct(Long id)`), never the `Product` entity
-- [ ] `CategoryController`, `ProductController`
-- [ ] Business rule: deleting a category that still has products is rejected
-- [ ] `@ApplicationModuleTest` for `catalog`
-- [ ] `ModularityTests` still passes
+- [x] `Category`, `Product` entities and their repositories/services, package-private
+- [x] `catalog.api.CatalogApi` (`@NamedInterface`): exposes what `order` will need later (e.g. `Optional<ProductSummary> findProduct(Long id)`), never the `Product` entity
+- [x] `CategoryController`, `ProductController`
+- [x] Business rule: deleting a category that still has products is rejected
+- [x] `@ApplicationModuleTest` for `catalog`
+- [x] `ModularityTests` still passes
+
+### Notes on what was built
+
+- **Visibility**: `Category`, `Product`, their repositories and the `CategoryService`/`ProductService` interfaces are `public` in Java, because the implementations in `catalog.impl` and the controllers in `catalog.web` use them (see "Java visibility vs. module visibility" in Code conventions). The implementations (`CategoryServiceImpl`, `ProductServiceImpl`, `CatalogApiImpl`) and the controllers are package-private. Only `catalog.api` is a named interface (`@NamedInterface("api")`), so `verify()` rejects any other module touching the rest.
+- **`CatalogApi`**: `Optional<ProductSummary> findProduct(Long id)` and `boolean productExists(Long id)`. `ProductSummary` is a record (`id`, `name`, `unitPrice`, `categoryId`); the `Product` entity never leaves the module.
+- **Category deletion**: the rule lives in `CategoryService.delete(id)` (404 for an unknown category, `BusinessRuleException`, so 422, while products still belong to it) and is covered by unit and module tests. By decision, **no `DELETE` endpoint is exposed**: the API only has the four endpoints of the table.
+- **Roles**: the endpoints use exactly `hasRole('USER')` for the lists and `hasRole('ADMIN')` for creation. There is no role hierarchy, so an `ADMIN` caller without the `USER` role gets a 403 on the lists. Method security is enabled once in `common/MethodSecurityConfig` (`@EnableMethodSecurity`).
+- **Validation**: request bodies use Bean Validation (name mandatory and sized like its column, `unitPrice` strictly positive and within `NUMERIC(12, 2)`, `categoryId` mandatory). `page` (>= 0), `size` (1 to 100) and `categoryId` query parameters are checked by Spring MVC's built-in method validation, which answers a 400. `POST` answers 201 with the created resource. Lists are sorted by id.
+- **Duplicate names** are checked by the service (422); the `UNIQUE` constraint of V1 remains the last line of defence.
+- **Tests**: Mockito unit tests of the services and of `CatalogApiImpl`, repository tests on PostgreSQL (Testcontainers), HTTP tests with `MockMvcTester` and `@WithMockUser` (200/201, 400, 404, 422, 401 anonymous, 403 wrong role), and `CatalogModuleTest` (`@ApplicationModuleTest`, STANDALONE mode, own container). `spring-boot-starter-security-test` was added for `@WithMockUser`.
 
 ## feature/customer-module
 
