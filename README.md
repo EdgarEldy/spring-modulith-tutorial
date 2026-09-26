@@ -337,13 +337,24 @@ The first module that actually depends on others - this is where a boundary viol
 
 ### Tasks
 
-- [ ] `Order` entity, repository, package-private
-- [ ] `OrderServiceImpl`: depends on `CatalogApi`/`CustomerApi` (injected as the named-interface types, never the internal entities or repositories of those modules) to validate a product/customer exist and to read the product's price. `Order.total` is a **snapshot** taken at order-creation time (`quantity * product.unitPrice` as returned by `CatalogApi` at that moment), stored on the `orders` row itself rather than recalculated later - so a subsequent price change on the product never alters the total of an order already placed
-- [ ] `OrderPlacedEvent` (public - an event is precisely the kind of thing meant to cross a module boundary): published via `ApplicationEventPublisher` after the order is persisted
-- [ ] `OrderController`
-- [ ] A deliberate violation, introduced then immediately removed, as a learning exercise: temporarily import `catalog.Product` directly into `OrderServiceImpl` instead of using `CatalogApi`, run `ModularityTests`, observe it fail with a clear violation message, then revert to the correct dependency - this is meant to be done once, by hand, so the failure message is seen at least once before trusting the test going forward
-- [ ] `@ApplicationModuleTest` for `order`, which by Modulith's own rules will also boot `catalog` and `customer` (its declared dependencies) but not `notification`
-- [ ] `ModularityTests` passes with the real dependency graph: `order → catalog`, `order → customer`
+- [x] `Order` entity, repository, package-private
+- [x] `OrderServiceImpl`: depends on `CatalogApi`/`CustomerApi` (injected as the named-interface types, never the internal entities or repositories of those modules) to validate a product/customer exist and to read the product's price. `Order.total` is a **snapshot** taken at order-creation time (`quantity * product.unitPrice` as returned by `CatalogApi` at that moment), stored on the `orders` row itself rather than recalculated later - so a subsequent price change on the product never alters the total of an order already placed
+- [x] `OrderPlacedEvent` (public - an event is precisely the kind of thing meant to cross a module boundary): published via `ApplicationEventPublisher` after the order is persisted
+- [x] `OrderController`
+- [x] A deliberate violation, introduced then immediately removed, as a learning exercise: temporarily import `catalog.Product` directly into `OrderServiceImpl` instead of using `CatalogApi`, run `ModularityTests`, observe it fail with a clear violation message, then revert to the correct dependency - this is meant to be done once, by hand, so the failure message is seen at least once before trusting the test going forward
+- [x] `@ApplicationModuleTest` for `order`, which by Modulith's own rules will also boot `catalog` and `customer` (its declared dependencies) but not `notification`
+- [x] `ModularityTests` passes with the real dependency graph: `order → catalog`, `order → customer`
+
+### Notes on what was built
+
+- **Declared dependencies**: `order/package-info.java` carries `@ApplicationModule(allowedDependencies = {"catalog :: api", "customer :: api", "common"})`. Without it, the deliberate violation below would pass: Spring Modulith counts the public types of a module's base package (such as `catalog.Product`, public because `catalog/impl/` uses it) as part of that module's unnamed interface. See "Code conventions".
+- **The deliberate violation**, done once by hand and reverted (never committed): adding a `catalog.Product` field and import to `OrderServiceImpl` made `ModularityTests` fail with:
+  `Module 'order' depends on module 'catalog' via com.edgareldy.springmodulithtutorial.order.impl.OrderServiceImpl -> com.edgareldy.springmodulithtutorial.catalog.Product. Allowed targets: catalog :: api, customer :: api, common.`
+- **Entity**: `Order` is mapped as JPA entity `PlacedOrder` on table `orders` (`ORDER` is a reserved word of the query language). `customerId`/`productId` are plain columns, not associations.
+- **Total snapshot**: `quantity * ProductSummary.unitPrice()`, rounded to cents (`HALF_UP`), stored on the row and never recalculated; a test changes the product price in the database and checks that the existing order keeps its total.
+- **Event**: `OrderPlacedEvent(orderId, customerId, productId, quantity, total)` is a public record in the base package of `order`, published with `ApplicationEventPublisher` inside the transaction that persists the order.
+- **Endpoints**: `POST` answers `201` with a `Location` header; an unknown customer or product gives `404`; the list is paginated (`page >= 0`, `size` 1 to 100). Roles are checked literally, without a hierarchy.
+- **Module test**: `OrderModuleTest` runs `@ApplicationModuleTest(mode = DIRECT_DEPENDENCIES)`, asserts that catalog and customer are booted but not notification nor auth, and checks the event with `Scenario` / `AssertablePublishedEvents`.
 
 ## feature/notification-module
 
@@ -379,7 +390,7 @@ The first module that actually depends on others - this is where a boundary viol
 
 - Root package: `com.edgareldy.springmodulithtutorial`, one direct sub-package per module (`auth`, `catalog`, `customer`, `order`, `notification`), plus `common` as an open, shared package
 - Every entity, repository, and service implementation is **package-private** by default; only what's placed under a module's `api/` sub-package (marked `@NamedInterface`) or is itself an event is visible to other modules
-- **Java visibility vs. module visibility**: Java has no notion of a sub-package, so a type used from `impl/` or `web/` of its own module (a service interface, a DTO) has to be `public` in Java. That does not widen the module's API: for Spring Modulith, every type outside the `api/` named interface stays internal to its module whatever its Java modifier, and `ApplicationModules.verify()` fails if another module uses it. Any type no other package of its module needs keeps the package-private default
+- **Java visibility vs. module visibility**: Java has no notion of a sub-package, so a type used from `impl/` or `web/` of its own module (a service interface, a DTO) has to be `public` in Java. Spring Modulith hides every sub-package of a module that is not a named interface, but it treats the `public` types of a module's **base package** as part of that module's unnamed interface: a public entity such as `catalog.Product` would not be reported by `verify()` on its own. That is why every module that depends on others declares exactly what it may use in its `package-info.java`, e.g. `@ApplicationModule(allowedDependencies = {"catalog :: api", "customer :: api", "common"})` on `order`: `ApplicationModules.verify()` then fails as soon as that module touches anything else. Any type no other package of its module needs keeps the package-private default
 - Test methods are named `_NN_Should<Outcome>_When<Condition>` (`NN` restarting at `_01_` in each class, in source order), except the `contextLoads()` smoke test generated with the project
 - A module never imports another module's entity or repository directly - always through that module's named interface, or through an event
 - `ModularityTests` (`ApplicationModules.verify()`) runs in CI on every push - a module-boundary violation is a build failure, not a code-review comment
