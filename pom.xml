@@ -174,4 +174,42 @@
 		</plugins>
 	</build>
 
+	<profiles>
+		<!--
+			Regenerates the committed architecture documentation:
+			  ./mvnw -Pdocs test -Dtest=ModularityTests
+			ModularityTests writes the PlantUML diagrams and module canvases into target/spring-modulith-docs,
+			then this execution, bound to the same test phase and therefore running after Surefire, copies them
+			into docs/. The committed diagrams are always derived from the verified module model, never drawn by hand.
+		-->
+		<profile>
+			<id>docs</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-resources-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>copy-module-docs</id>
+								<phase>test</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${project.basedir}/docs</outputDirectory>
+									<resources>
+										<resource>
+											<directory>${project.build.directory}/spring-modulith-docs</directory>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 </project>
