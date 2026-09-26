@@ -1,4 +1,4 @@
-package com.edgareldy.springmodulithtutorial.common;
+package com.edgareldy.springmodulithtutorial.auth;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

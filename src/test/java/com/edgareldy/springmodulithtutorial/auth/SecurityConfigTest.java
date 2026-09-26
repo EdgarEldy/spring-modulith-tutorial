@@ -1,4 +1,4 @@
-package com.edgareldy.springmodulithtutorial.common;
+package com.edgareldy.springmodulithtutorial.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
