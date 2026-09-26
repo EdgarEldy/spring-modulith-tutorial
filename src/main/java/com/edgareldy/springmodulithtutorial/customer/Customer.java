@@ -15,10 +15,11 @@ import jakarta.persistence.Table;
  * Date : 9/26/26
  * Project : spring-modulith-tutorial
  */
-// Public in Java only because the service implementation lives in the impl/ sub-package. For Spring
-// Modulith it stays an internal type of the customer module: no other module may reference it, they
-// read customers through customer.api.CustomerApi. There is deliberately no user_id column: linking a
-// customer to an auth user would be a foreign key across a module boundary.
+// Public in Java only because the service implementation lives in the impl/ sub-package. Other modules
+// must read customers through customer.api.CustomerApi instead: a public type of the base package is
+// part of the module's unnamed interface, so that rule is enforced by verify() on the consumer side,
+// once it declares allowedDependencies = "customer :: api". There is deliberately no user_id column:
+// linking a customer to an auth user would be a foreign key across a module boundary.
 @Entity
 @Table(name = "customers")
 public class Customer {
