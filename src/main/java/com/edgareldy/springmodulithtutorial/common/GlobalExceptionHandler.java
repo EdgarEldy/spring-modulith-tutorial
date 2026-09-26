@@ -51,17 +51,21 @@ public class GlobalExceptionHandler {
 
     /**
      * Bean Validation failure on a request body: the offending fields are returned as the payload.
+     * A constraint declared on the whole request (a class-level rule) is reported under the name of
+     * the request object, so it is never lost.
      *
      * @param ex the validation failure
-     * @return a 400 envelope whose data maps each invalid field to its message
+     * @return a 400 envelope whose data maps each invalid field or object to its message
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(MethodArgumentNotValidException ex) {
-        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        Map<String, String> errors = new LinkedHashMap<>();
         ex.getBindingResult().getFieldErrors()
-                .forEach(fieldError -> fieldErrors.putIfAbsent(fieldError.getField(), fieldError.getDefaultMessage()));
+                .forEach(fieldError -> errors.putIfAbsent(fieldError.getField(), fieldError.getDefaultMessage()));
+        ex.getBindingResult().getGlobalErrors()
+                .forEach(globalError -> errors.putIfAbsent(globalError.getObjectName(), globalError.getDefaultMessage()));
         return ResponseEntity.badRequest()
-                .body(new ApiResponse<>(false, "Validation failed", fieldErrors, Instant.now()));
+                .body(new ApiResponse<>(false, "Validation failed", errors, Instant.now()));
     }
 
     /**
@@ -86,7 +90,8 @@ public class GlobalExceptionHandler {
 
     /**
      * Anything else. Spring MVC's own exceptions (unknown route, wrong method, missing parameter...)
-     * implement {@link ErrorResponse} and keep their status; only genuinely unexpected errors become a 500.
+     * implement {@link ErrorResponse} and keep their status and headers (such as {@code Allow} on a 405);
+     * only genuinely unexpected errors become a 500.
      *
      * @param ex the exception
      * @return an error envelope
@@ -94,9 +99,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleOther(Exception ex) {
         if (ex instanceof ErrorResponse errorResponse) {
-            HttpStatusCode status = errorResponse.getStatusCode();
             String detail = errorResponse.getBody().getDetail();
-            return error(status, detail != null ? detail : ex.getMessage());
+            return ResponseEntity.status(errorResponse.getStatusCode())
+                    .headers(errorResponse.getHeaders())
+                    .body(ApiResponse.error(detail != null ? detail : ex.getMessage()));
         }
         log.error("Unhandled exception", ex);
         return error(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");
