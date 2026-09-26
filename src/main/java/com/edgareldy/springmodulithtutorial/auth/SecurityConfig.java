@@ -4,8 +4,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -95,17 +93,5 @@ class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
-    }
-
-    /**
-     * @return the hierarchy stating that an administrator holds every right of a user
-     */
-    // ADMIN may also call the USER endpoints without being granted both roles. Method security picks
-    // this bean up automatically, so hasRole('USER') is satisfied by a token carrying only ADMIN.
-    @Bean
-    static RoleHierarchy roleHierarchy() {
-        return RoleHierarchyImpl.withDefaultRolePrefix()
-                .role(Role.ADMIN).implies(Role.USER)
-                .build();
     }
 }

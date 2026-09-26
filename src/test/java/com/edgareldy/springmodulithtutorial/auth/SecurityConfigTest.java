@@ -3,7 +3,6 @@ package com.edgareldy.springmodulithtutorial.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.edgareldy.springmodulithtutorial.TestcontainersConfiguration;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -14,13 +13,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 
 /**
- * Checks the JWT security filter chain: public routes, 401 and 403 with an ApiResponse body, and the role hierarchy.
+ * Checks the JWT security filter chain: public routes and the 401 and 403 answers with an ApiResponse body.
  * <p>
  * Created edgar.muhamyangabo on 9/26/26
  * Author : edgar.muhamyangabo
@@ -34,9 +30,6 @@ class SecurityConfigTest {
 
     @Autowired
     private MockMvcTester mvc;
-
-    @Autowired
-    private RoleHierarchy roleHierarchy;
 
     @Autowired
     private ApiResponseAccessDeniedHandler accessDeniedHandler;
@@ -71,16 +64,7 @@ class SecurityConfigTest {
     }
 
     @Test
-    void _05_ShouldGrantTheUserRole_WhenTheCallerIsAnAdmin() {
-        List<SimpleGrantedAuthority> admin = List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
-
-        assertThat(roleHierarchy.getReachableGrantedAuthorities(admin))
-                .extracting(GrantedAuthority::getAuthority)
-                .contains("ROLE_ADMIN", "ROLE_USER");
-    }
-
-    @Test
-    void _06_ShouldWriteA403Envelope_WhenTheFilterChainDeniesAccess() throws Exception {
+    void _05_ShouldWriteA403Envelope_WhenTheFilterChainDeniesAccess() throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         accessDeniedHandler.handle(new MockHttpServletRequest(), response, new AccessDeniedException("denied"));
