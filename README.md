@@ -409,7 +409,7 @@ To regenerate the committed copy, for instance after adding a module or changing
 git add docs/
 ```
 
-`mvn test -Dtest=ModularityTests` alone refreshes `target/spring-modulith-docs/` without touching `docs/`. The `.puml` files render with any PlantUML viewer (IDE plugin, `plantuml` CLI), the `.adoc` canvases with any AsciiDoc viewer.
+`mvn test -Dtest=ModularityTests` alone refreshes `target/spring-modulith-docs/` without touching `docs/`. The profile empties `docs/` before copying, so a removed module leaves no stale file. The Documenter does not sort the relations of `components.puml`, so a regeneration may only reorder lines without changing the diagram; such a diff is not worth committing. The `.puml` files render with any PlantUML viewer (IDE plugin, `plantuml` CLI), the `.adoc` canvases with any AsciiDoc viewer.
 
 ## Order of work
 
