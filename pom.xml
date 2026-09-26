@@ -30,6 +30,8 @@
 		<java.version>17</java.version>
 		<spring-modulith.version>2.0.7</spring-modulith.version>
 		<springdoc-openapi.version>3.1.1</springdoc-openapi.version>
+		<!-- The jMolecules release train already used transitively by Spring Modulith 2.0.7. -->
+		<jmolecules-bom.version>2025.0.2</jmolecules-bom.version>
 	</properties>
 
 	<dependencyManagement>
@@ -46,6 +48,13 @@
 				<groupId>org.springdoc</groupId>
 				<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 				<version>${springdoc-openapi.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.jmolecules</groupId>
+				<artifactId>jmolecules-bom</artifactId>
+				<version>${jmolecules-bom.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -83,6 +92,11 @@
 		<dependency>
 			<groupId>org.springframework.modulith</groupId>
 			<artifactId>spring-modulith-starter-jpa</artifactId>
+		</dependency>
+		<!-- @DomainEvent marks the events a module publishes, so the Documenter can list them in module canvases. -->
+		<dependency>
+			<groupId>org.jmolecules</groupId>
+			<artifactId>jmolecules-events</artifactId>
 		</dependency>
 		<!-- Spring Boot 4 moved the Flyway auto-configuration into its own module: flyway-core alone is no longer migrated at startup. -->
 		<dependency>
@@ -147,6 +161,17 @@
 
 	<build>
 		<plugins>
+			<!--
+				Java 17 still uses the platform charset by default (cp1252 on Windows, UTF-8 on Linux). Forcing UTF-8 in
+				the test JVM makes the documentation written by ModularityTests identical on every machine and CI.
+			-->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-Dfile.encoding=UTF-8</argLine>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
