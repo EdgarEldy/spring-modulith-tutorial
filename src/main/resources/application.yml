@@ -1,0 +1,56 @@
+# Shared configuration, active in every profile.
+# The datasource is deliberately absent here: application-dev.yml points at the docker-compose
+# database, docker-compose passes SPRING_DATASOURCE_* environment variables to the packaged app,
+# and the tests get theirs from a Testcontainers @ServiceConnection.
+spring:
+  application:
+    name: spring-modulith-tutorial
+  jpa:
+    # Flyway owns the schema (db/migration). Hibernate only checks that the entities match it,
+    # so a mapping drift fails at startup instead of silently altering tables.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  modulith:
+    events:
+      # Publications left incomplete in event_publication (a listener failed, or the application stopped
+      # before it ran) are submitted again at startup, which turns the registry into a retry mechanism.
+      republish-outstanding-events-on-restart: true
+
+app:
+  auth:
+    # Base of the activation link written to the log in place of an email.
+    base-url: ${APP_BASE_URL:http://localhost:8080}
+    activation-token-ttl: 24h
+    password-reset-token-ttl: 15m
+    jwt:
+      # HS256 needs a key of at least 32 bytes. This default only exists so the application starts
+      # out of the box in development and tests: any shared or real deployment must set APP_JWT_SECRET.
+      secret: ${APP_JWT_SECRET:dev-only-jwt-secret-change-me-0123456789abcdef}
+      issuer: spring-modulith-tutorial
+      ttl: 1h
+    # Optional administrator created at startup by AdminBootstrap, only when both variables are set.
+    # There is deliberately no default: without them, no ADMIN account exists.
+    admin:
+      email: ${APP_ADMIN_EMAIL:}
+      password: ${APP_ADMIN_PASSWORD:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      # Lists each indicator (db, diskSpace, ping...) with its own status, without leaking details.
+      show-components: always
+      # /actuator/health/liveness says "the process is alive", /actuator/health/readiness says
+      # "it can serve traffic". Readiness includes the db indicator, so an orchestrator can tell an
+      # instance that lost its database apart from one that is simply still starting.
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db

@@ -1,0 +1,29 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.edgareldy.springmodulithtutorial.auth`
+|Spring components
+|_Services_
+
+* `c.e.s.a.JwtService`
+* `c.e.s.a.api.AuthApi` (via `c.e.s.a.impl.AuthApiImpl`)
+* `c.e.s.a.UserService` (via `c.e.s.a.impl.UserServiceImpl`)
+
+_Repositories_
+
+* `c.e.s.a.ActivationTokenRepository`
+* `c.e.s.a.BlacklistedTokenRepository`
+* `c.e.s.a.PasswordResetTokenRepository`
+* `c.e.s.a.RoleRepository`
+* `c.e.s.a.UserRepository`
+
+_Configuration properties_
+
+* `c.e.s.a.AuthProperties`
+|Aggregate roots
+|* `c.e.s.a.ActivationToken`
+* `c.e.s.a.BlacklistedToken`
+* `c.e.s.a.PasswordResetToken`
+* `c.e.s.a.Role`
+* `c.e.s.a.User`
+|===

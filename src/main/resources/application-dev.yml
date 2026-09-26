@@ -1,0 +1,16 @@
+# Local development: the application runs from the IDE or "mvnw spring-boot:run -Dspring-boot.run.profiles=dev"
+# against the PostgreSQL container started by "docker compose up db".
+# Port 5433 matches the host port published by docker-compose.yml (DB_PORT), so it never clashes
+# with a PostgreSQL already installed on the machine.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:${DB_PORT:5433}/${DB_NAME:spring_modulith_tutorial}
+    username: ${DB_USER:spring_modulith_tutorial}
+    password: ${DB_PASSWORD:spring_modulith_tutorial}
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    com.edgareldy.springmodulithtutorial: DEBUG
+    org.springframework.modulith: DEBUG

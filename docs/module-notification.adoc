@@ -1,0 +1,11 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.edgareldy.springmodulithtutorial.notification`
+|Spring components
+|_Event listeners_
+
+* `c.e.s.n.OrderPlacedEventListener`
+|Events listened to
+|* `c.e.s.o.OrderPlacedEvent` (async) 
+|===
