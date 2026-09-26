@@ -294,11 +294,22 @@ public record ApiResponse<T>(
 
 ### Tasks
 
-- [ ] `Customer` entity, repository, service, package-private
-- [ ] `customer.api.CustomerApi` (`@NamedInterface`): exposes `Optional<CustomerSummary> findCustomer(Long id)`
-- [ ] `CustomerController`
-- [ ] `@ApplicationModuleTest` for `customer`
-- [ ] `ModularityTests` still passes
+- [x] `Customer` entity, repository, service, package-private
+- [x] `customer.api.CustomerApi` (`@NamedInterface`): exposes `Optional<CustomerSummary> findCustomer(Long id)`
+- [x] `CustomerController`
+- [x] `@ApplicationModuleTest` for `customer`
+- [x] `ModularityTests` still passes
+
+### Notes on what was built
+
+- **Layout**: `Customer`, `CustomerRepository`, `CustomerService` and the `CreateCustomerRequest`/`CustomerResponse` records live in the module's base package; `impl/CustomerServiceImpl` and `impl/CustomerApiImpl` are package-private; `web/CustomerController` is package-private too. The entity and repository are `public` in Java only because `impl/` needs them.
+- **Base package vs. named interface**: Spring Modulith puts every public type of a module's base package into the module's unnamed interface, even when an `api` named interface exists, so `verify()` alone does not stop another module from importing `customer.Customer`. The consumer closes that door by declaring `@ApplicationModule(allowedDependencies = "customer :: api")` in its `package-info.java`: `verify()` then rejects any type outside `customer.api` (checked by hand on this branch with a throwaway class in `order`).
+- **Public API**: `customer.api` is `@NamedInterface("api")` and holds `CustomerApi` (`findCustomer(id)` returning an `Optional<CustomerSummary>`, and `customerExists(id)`) and the `CustomerSummary` record (id, names, email). The entity never leaves the module.
+- **Rules**: emails are stored in lower case, so the unique constraint also catches a duplicate typed in another case; a duplicate is a 422 (`BusinessRuleException`), including when two concurrent requests race past the upfront check (the insert is flushed and the constraint violation translated). An unknown id is a 404.
+- **HTTP**: `POST /api/v1/customers` answers **201 Created** with a `Location` header and the customer in `ApiResponse.data`; `GET /api/v1/customers/{id}` answers 200. Bean Validation checks the names, a telephone pattern, a valid email and the address, with the column lengths of V1 as size limits.
+- **Roles**: `@PreAuthorize("hasRole('USER')")` on the read and `hasRole('ADMIN')` on the creation, exactly as in the table. There is no role hierarchy: a caller holding only `ADMIN` gets a 403 on the read endpoint. Method security is enabled once in `common/MethodSecurityConfig`, and `spring-boot-starter-security-test` provides `@WithMockUser` for the tests.
+- **Schema**: the entity maps the existing `customers` table of V1 (no migration added, still no `user_id` column).
+- **Tests**: Mockito tests of the service and of `CustomerApiImpl`; a repository test on PostgreSQL (Testcontainers) reusing the shared integration context instead of a JPA slice; HTTP tests with `MockMvcTester` and `@WithMockUser` (201, 200, 400, 404, 422, 401 anonymous, 403 wrong role, bodies of 401/403 not asserted since `feature/auth-module` replaces the filter chain); and an `@ApplicationModuleTest` booting the customer module alone.
 
 ## feature/order-module
 
