@@ -1,0 +1,40 @@
+@startuml
+title <size:24>SpringModulithTutorialApplication</size>
+
+set separator none
+top to bottom direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+System_Boundary("SpringModulithTutorialApplication_boundary", "SpringModulithTutorialApplication", $tags="") {
+  Container_Boundary("SpringModulithTutorialApplication.SpringModulithTutorialApplication_boundary", "SpringModulithTutorialApplication", $tags="") {
+    Component(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Common, "Common", $techn="Module", $descr="", $tags="", $link="")
+    Component(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Auth, "Auth", $techn="Module", $descr="", $tags="", $link="")
+    Component(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Catalog, "Catalog", $techn="Module", $descr="", $tags="", $link="")
+    Component(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Customer, "Customer", $techn="Module", $descr="", $tags="", $link="")
+    Component(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Order, "Order", $techn="Module", $descr="", $tags="", $link="")
+    Component(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Notification, "Notification", $techn="Module", $descr="", $tags="", $link="")
+  }
+
+}
+
+Rel(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Catalog, SpringModulithTutorialApplication.SpringModulithTutorialApplication.Common, "depends on", $techn="", $tags="", $link="")
+Rel(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Customer, SpringModulithTutorialApplication.SpringModulithTutorialApplication.Common, "depends on", $techn="", $tags="", $link="")
+Rel(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Notification, SpringModulithTutorialApplication.SpringModulithTutorialApplication.Order, "listens to", $techn="", $tags="", $link="")
+Rel(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Order, SpringModulithTutorialApplication.SpringModulithTutorialApplication.Common, "depends on", $techn="", $tags="", $link="")
+Rel(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Order, SpringModulithTutorialApplication.SpringModulithTutorialApplication.Catalog, "uses", $techn="", $tags="", $link="")
+Rel(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Order, SpringModulithTutorialApplication.SpringModulithTutorialApplication.Customer, "uses", $techn="", $tags="", $link="")
+Rel(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Auth, SpringModulithTutorialApplication.SpringModulithTutorialApplication.Common, "depends on", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

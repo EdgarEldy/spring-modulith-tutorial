@@ -1,0 +1,19 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.edgareldy.springmodulithtutorial.catalog`
+|Spring components
+|_Services_
+
+* `c.e.s.c.api.CatalogApi` (via `c.e.s.c.impl.CatalogApiImpl`)
+* `c.e.s.c.CategoryService` (via `c.e.s.c.impl.CategoryServiceImpl`)
+* `c.e.s.c.ProductService` (via `c.e.s.c.impl.ProductServiceImpl`)
+
+_Repositories_
+
+* `c.e.s.c.CategoryRepository`
+* `c.e.s.c.ProductRepository`
+|Aggregate roots
+|* `c.e.s.c.Category`
+* `c.e.s.c.Product`
+|===

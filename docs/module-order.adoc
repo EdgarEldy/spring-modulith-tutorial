@@ -1,0 +1,22 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.edgareldy.springmodulithtutorial.order`
+|Spring components
+|_Services_
+
+* `c.e.s.o.OrderService` (via `c.e.s.o.impl.OrderServiceImpl`)
+
+_Repositories_
+
+* `c.e.s.o.OrderRepository`
+|Bean references
+|* `c.e.s.c.api.CatalogApi` (in Catalog)
+* `c.e.s.c.api.CustomerApi` (in Customer)
+|Aggregate roots
+|* `c.e.s.o.Order`
+|Published events
+|* `c.e.s.o.OrderPlacedEvent` created by:
+** `c.e.s.o.impl.OrderServiceImpl.create(…)`
+
+|===
