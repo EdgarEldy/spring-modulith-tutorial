@@ -1,6 +1,7 @@
 package com.edgareldy.springmodulithtutorial.order;
 
 import java.math.BigDecimal;
+import org.jmolecules.event.annotation.DomainEvent;
 import org.springframework.modulith.NamedInterface;
 
 /**
@@ -24,6 +25,9 @@ import org.springframework.modulith.NamedInterface;
 // @NamedInterface on the type itself publishes this single record as the "events" interface of order.
 // A listening module can then declare allowedDependencies = "order :: events" and be limited to the
 // event, even though the entity and repository of order are also public types of its base package.
+// @DomainEvent (jMolecules) states in the code that this type is an event. Spring Modulith reads it to list
+// OrderPlacedEvent under "Events published" in the generated canvas of the order module.
+@DomainEvent
 @NamedInterface("events")
 public record OrderPlacedEvent(
         Long orderId,
