@@ -32,7 +32,7 @@ jobs:
               echo "INVALID: $subject"
               failed=1
             fi
-          done < <(git log "$BASE_SHA..$HEAD_SHA" --no-merges --pretty=format:'%s')
+          done < <(git log "$BASE_SHA..$HEAD_SHA" --no-merges --pretty=tformat:'%s')
 
           if [ "$failed" -ne 0 ]; then
             echo ""
