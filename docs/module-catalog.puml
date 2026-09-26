@@ -1,0 +1,30 @@
+@startuml
+title <size:24>Catalog</size>
+
+set separator none
+top to bottom direction
+
+<style>
+  root {
+    BackgroundColor: #ffffff
+    FontColor: #444444
+  }
+</style>
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+System_Boundary("SpringModulithTutorialApplication_boundary", "SpringModulithTutorialApplication", $tags="") {
+  Container_Boundary("SpringModulithTutorialApplication.SpringModulithTutorialApplication_boundary", "SpringModulithTutorialApplication", $tags="") {
+    Component(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Common, "Common", $techn="Module", $descr="", $tags="", $link="")
+    Component(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Catalog, "Catalog", $techn="Module", $descr="", $tags="", $link="")
+  }
+
+}
+
+Rel(SpringModulithTutorialApplication.SpringModulithTutorialApplication.Catalog, SpringModulithTutorialApplication.SpringModulithTutorialApplication.Common, "depends on", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+hide stereotypes
+@enduml

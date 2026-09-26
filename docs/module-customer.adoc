@@ -1,0 +1,16 @@
+[%autowidth.stretch, cols="h,a"]
+|===
+|Base package
+|`com.edgareldy.springmodulithtutorial.customer`
+|Spring components
+|_Services_
+
+* `c.e.s.c.api.CustomerApi` (via `c.e.s.c.impl.CustomerApiImpl`)
+* `c.e.s.c.CustomerService` (via `c.e.s.c.impl.CustomerServiceImpl`)
+
+_Repositories_
+
+* `c.e.s.c.CustomerRepository`
+|Aggregate roots
+|* `c.e.s.c.Customer`
+|===
