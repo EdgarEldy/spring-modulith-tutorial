@@ -203,15 +203,28 @@ public record ApiResponse<T>(
 
 ### Tasks
 
-- [ ] Initialize the project (Maven, Java 17, Spring Boot 4.1.x), **single module**
-- [ ] Dependencies: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-security`, `spring-boot-starter-actuator`, `spring-modulith-starter-core`, `spring-modulith-starter-jpa`, `flyway-core`, `postgresql`, `lombok`, `springdoc-openapi-starter-webmvc-ui` - all versions managed by the `spring-modulith-bom` (2.0.7) and the Spring Boot 4.1.x BOM
-- [ ] Test dependencies: `spring-boot-starter-test`, `spring-modulith-starter-test`, `testcontainers`
-- [ ] Package skeleton: `auth`, `catalog`, `customer`, `order`, `notification`, `common` as direct sub-packages of the main application package - created empty, but present, from this branch
-- [ ] `ModularityTests.java`: a single test, `ApplicationModules.of(SpringModulithTutorialApplication.class).verify()` - **this must pass on an empty skeleton before any module has real code in it**, establishing the discipline from day one rather than bolting it on later
-- [ ] `common` package: `ApiResponse<T>`, `PageResponse<T>`, `GlobalExceptionHandler`, base exceptions
-- [ ] Flyway script `V1__init_schema.sql` (all tables, plus Modulith's own `event_publication` table via `spring-modulith-starter-jpa`'s schema)
-- [ ] Actuator health check exposed at `/actuator/health`, including the database connection (`db` health indicator) so the container orchestrator can tell a genuinely unhealthy instance from one still starting up
-- [ ] `docker-compose.yml` (app + PostgreSQL), `.github/workflows/ci.yml` - the CI job runs `ModularityTests` on every push, so a boundary violation fails the build immediately, same as any other test
+- [x] Initialize the project (Maven, Java 17, Spring Boot 4.1.x), **single module**
+- [x] Dependencies: `spring-boot-starter-web`, `spring-boot-starter-data-jpa`, `spring-boot-starter-security`, `spring-boot-starter-actuator`, `spring-modulith-starter-core`, `spring-modulith-starter-jpa`, `flyway-core`, `postgresql`, `lombok`, `springdoc-openapi-starter-webmvc-ui` - all versions managed by the `spring-modulith-bom` (2.0.7) and the Spring Boot 4.1.x BOM
+- [x] Test dependencies: `spring-boot-starter-test`, `spring-modulith-starter-test`, `testcontainers`
+- [x] Package skeleton: `auth`, `catalog`, `customer`, `order`, `notification`, `common` as direct sub-packages of the main application package - created empty, but present, from this branch
+- [x] `ModularityTests.java`: a single test, `ApplicationModules.of(SpringModulithTutorialApplication.class).verify()` - **this must pass on an empty skeleton before any module has real code in it**, establishing the discipline from day one rather than bolting it on later
+- [x] `common` package: `ApiResponse<T>`, `PageResponse<T>`, `GlobalExceptionHandler`, base exceptions
+- [x] Flyway script `V1__init_schema.sql` (all tables, plus Modulith's own `event_publication` table via `spring-modulith-starter-jpa`'s schema)
+- [x] Actuator health check exposed at `/actuator/health`, including the database connection (`db` health indicator) so the container orchestrator can tell a genuinely unhealthy instance from one still starting up
+- [x] `docker-compose.yml` (app + PostgreSQL), `.github/workflows/ci.yml` - the CI job runs `ModularityTests` on every push, so a boundary violation fails the build immediately, same as any other test
+
+### Notes on what was built
+
+- **Spring Boot 4 modular starters**: Boot 4 moved each auto-configuration into its own module, so Flyway is pulled in through `spring-boot-starter-flyway` (which brings `flyway-core`, plus `flyway-database-postgresql`); `flyway-core` alone would sit on the classpath without ever migrating. For the same reason the MockMvc test support comes from `spring-boot-starter-webmvc-test`, and Testcontainers 2.x is declared as `spring-boot-testcontainers`, `testcontainers-postgresql` and `testcontainers-junit-jupiter`.
+- **Bean Validation**: `spring-boot-starter-validation` is added on top of the listed dependencies. `GlobalExceptionHandler` answers a validation failure with a 400 listing the invalid fields, and every module's request DTOs rely on `@Valid`.
+- **Versions**: Spring Boot 4.1.1, Spring Modulith 2.0.7 (`spring-modulith-bom`), springdoc-openapi 3.1.1 (the only version held in a `pom.xml` property, since neither BOM manages it).
+- **`common` is declared open** with `@ApplicationModule(type = ApplicationModule.Type.OPEN)` in its `package-info.java`; the business modules exist from this branch as packages holding only a `package-info.java`.
+- **Error responses** also use `ApiResponse<T>` (`ApiResponse.error(...)`): 404 `ResourceNotFoundException`, 422 `BusinessRuleException`, 400 for validation (invalid fields as `data`) or an unreadable body, 403 for a failed role check, the real status for Spring MVC's own errors, and a generic 500 otherwise.
+- **Schema**: `V1__init_schema.sql` creates every table, seeds the `ADMIN` and `USER` roles, and copies Modulith's v2 `event_publication` DDL. No foreign key crosses a module boundary: `orders.customer_id`/`orders.product_id` are plain columns.
+- **Health**: `/actuator/health` lists its components (including `db`); the `readiness` probe group includes `db` while `liveness` does not, so losing the database takes an instance out of rotation without getting it restarted.
+- **Security baseline**: a minimal `SecurityFilterChain` (stateless, health and Swagger public, everything else authenticated) lives in `common` until `feature/auth-module` takes it over.
+- **Local database port**: `docker-compose.yml` publishes PostgreSQL on host port `${DB_PORT:-5433}` so it never collides with a PostgreSQL already installed on 5432; `application-dev.yml` points at it (`docker compose up db`, then run with the `dev` profile).
+- **CI**: `ci.yml` runs `ModularityTests` as its own first step, then `mvnw verify`; `pr-checks.yml` validates Conventional Commits on pull requests.
 
 ## feature/auth-module
 
@@ -333,6 +346,8 @@ The first module that actually depends on others - this is where a boundary viol
 
 - Root package: `com.edgareldy.springmodulithtutorial`, one direct sub-package per module (`auth`, `catalog`, `customer`, `order`, `notification`), plus `common` as an open, shared package
 - Every entity, repository, and service implementation is **package-private** by default; only what's placed under a module's `api/` sub-package (marked `@NamedInterface`) or is itself an event is visible to other modules
+- **Java visibility vs. module visibility**: Java has no notion of a sub-package, so a type used from `impl/` or `web/` of its own module (a service interface, a DTO) has to be `public` in Java. That does not widen the module's API: for Spring Modulith, every type outside the `api/` named interface stays internal to its module whatever its Java modifier, and `ApplicationModules.verify()` fails if another module uses it. Any type no other package of its module needs keeps the package-private default
+- Test methods are named `_NN_Should<Outcome>_When<Condition>` (`NN` restarting at `_01_` in each class, in source order), except the `contextLoads()` smoke test generated with the project
 - A module never imports another module's entity or repository directly - always through that module's named interface, or through an event
 - `ModularityTests` (`ApplicationModules.verify()`) runs in CI on every push - a module-boundary violation is a build failure, not a code-review comment
 - Events crossing a module boundary are named in the past tense (`OrderPlacedEvent`), same convention as the message-driven and messaging-based tutorials in this series
