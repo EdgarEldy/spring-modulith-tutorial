@@ -222,7 +222,7 @@ public record ApiResponse<T>(
 - **Error responses** also use `ApiResponse<T>` (`ApiResponse.error(...)`): 404 `ResourceNotFoundException`, 422 `BusinessRuleException`, 400 for validation (invalid fields as `data`) or an unreadable body, 403 for a failed role check, the real status for Spring MVC's own errors, and a generic 500 otherwise.
 - **Schema**: `V1__init_schema.sql` creates every table, seeds the `ADMIN` and `USER` roles, and copies Modulith's v2 `event_publication` DDL. No foreign key crosses a module boundary: `orders.customer_id`/`orders.product_id` are plain columns.
 - **Health**: `/actuator/health` lists its components (including `db`); the `readiness` probe group includes `db` while `liveness` does not, so losing the database takes an instance out of rotation without getting it restarted.
-- **Security baseline**: a minimal `SecurityFilterChain` (stateless, health and Swagger public, everything else authenticated) lives in `common` until `feature/auth-module` takes it over.
+- **Security baseline**: a minimal `SecurityFilterChain` (stateless, health, Swagger and `/error` public, everything else authenticated, 401 for an anonymous caller) lives in `common` until `feature/auth-module` takes it over.
 - **Local database port**: `docker-compose.yml` publishes PostgreSQL on host port `${DB_PORT:-5433}` so it never collides with a PostgreSQL already installed on 5432; `application-dev.yml` points at it (`docker compose up db`, then run with the `dev` profile).
 - **CI**: `ci.yml` runs `ModularityTests` as its own first step, then `mvnw verify`; `pr-checks.yml` validates Conventional Commits on pull requests.
 
