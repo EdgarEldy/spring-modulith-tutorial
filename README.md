@@ -360,11 +360,20 @@ The first module that actually depends on others - this is where a boundary viol
 
 ### Tasks
 
-- [ ] `OrderPlacedEventListener` (`@ApplicationModuleListener`): reacts to `OrderPlacedEvent`, logs a message standing in for an email/notification (consistent with how outbound notifications are simulated elsewhere in this tutorial series)
-- [ ] Verify the **Event Publication Registry** behavior directly, not just the happy path: with `spring-modulith-starter-jpa` in place, inspect the `event_publication` table after placing an order - a row should exist, marked completed once the listener runs successfully
-- [ ] A deliberately failing listener test: throw from `OrderPlacedEventListener`, restart the application context, and verify the event is retried automatically from the registry rather than lost - this is the concrete demonstration of "at-least-once delivery without a message broker"
-- [ ] `@ApplicationModuleTest` for `notification`
-- [ ] `ModularityTests` passes with `notification`'s dependency on `order` (for `OrderPlacedEvent` only - `notification` never depends on any of `order`'s internal classes)
+- [x] `OrderPlacedEventListener` (`@ApplicationModuleListener`): reacts to `OrderPlacedEvent`, logs a message standing in for an email/notification (consistent with how outbound notifications are simulated elsewhere in this tutorial series)
+- [x] Verify the **Event Publication Registry** behavior directly, not just the happy path: with `spring-modulith-starter-jpa` in place, inspect the `event_publication` table after placing an order - a row should exist, marked completed once the listener runs successfully
+- [x] A deliberately failing listener test: throw from `OrderPlacedEventListener`, restart the application context, and verify the event is retried automatically from the registry rather than lost - this is the concrete demonstration of "at-least-once delivery without a message broker"
+- [x] `@ApplicationModuleTest` for `notification`
+- [x] `ModularityTests` passes with `notification`'s dependency on `order` (for `OrderPlacedEvent` only - `notification` never depends on any of `order`'s internal classes)
+
+### Notes on what was built
+
+- **Dependency on the event only**: `OrderPlacedEvent` carries `@NamedInterface("events")` on the type itself, and `notification/package-info.java` declares `@ApplicationModule(allowedDependencies = "order :: events")`. Depending on `order` as a whole would also admit the public entity and repository of its base package; this declaration makes `verify()` reject anything but the event.
+- **Listener**: `OrderPlacedEventListener.on(OrderPlacedEvent)` is an `@ApplicationModuleListener` (after commit, asynchronous, own transaction) that logs `Notification: order <id> placed by customer <id> ...` in place of an email.
+- **Retry on restart**: `spring.modulith.events.republish-outstanding-events-on-restart: true` in `application.yml`. The default completion mode keeps completed rows in `event_publication` with their `completion_date`, which is what the registry test inspects.
+- **Registry test**: places a real order and waits (Awaitility) for its `event_publication` row, keyed by the listener id `...notification.OrderPlacedEventListener.on(...order.OrderPlacedEvent)`, to get a `completion_date`.
+- **Failing listener and restart**: `OrderPlacedEventRestartTest` starts the real application twice with `SpringApplicationBuilder` on its own `postgres:16` container. In the first context the listener is replaced by a Mockito spy of itself that throws: the row stays `FAILED` without `completion_date` and nothing is logged. The second context, with the normal listener, republishes it at startup: the same row (same id) is completed and the notification is logged. The expected `SimpleAsyncUncaughtExceptionHandler` error in the build output is that simulated failure.
+- **Module test**: `NotificationModuleTest` boots `notification` alone (no `OrderService` bean) and publishes the event through `Scenario`.
 
 ## feature/module-documentation
 
