@@ -242,18 +242,28 @@ public record ApiResponse<T>(
 
 ### Tasks
 
-- [ ] `User`, `Role` entities (with the `role_user` join) and their repositories/services - all package-private (no `public` modifier), living entirely inside `auth`
-- [ ] `ActivationToken`, `BlacklistedToken`, `PasswordResetToken` entities and repositories, package-private
-- [ ] `auth.api.AuthApi` (`@NamedInterface`): the only thing other modules are allowed to depend on - a small interface exposing only what's genuinely needed elsewhere (e.g. `boolean userExists(Long userId)`), never the `User` entity itself
-- [ ] `UserService`: registration (creates the user disabled, generates an `ActivationToken`, logs the activation link instead of emailing it, consistent with how outbound notifications are simulated elsewhere in this tutorial series), activation, login (issues a JWT), logout (blacklists the token's `jti`), forgot-password and reset-password
-- [ ] Public routes: register, activate-account, login, forgot-password and reset-password are reachable without a token; logout and me require an authenticated caller. A registered account gets the `USER` role and stays disabled until activated
-- [ ] `AdminBootstrap`: at startup, creates an enabled account with the `ADMIN` role from `APP_ADMIN_EMAIL`/`APP_ADMIN_PASSWORD` when both are set and the account does not exist yet - no default password anywhere in the code or the migrations, and nothing happens when the variables are absent
-- [ ] Enumeration protection: `/auth/forgot-password` returns the identical response regardless of whether the submitted email exists, so the endpoint can't be used to discover registered accounts
-- [ ] `AuthController`
-- [ ] `JwtService`: issues and validates JWTs, checking the token's `jti` against `BlacklistedToken` on every authenticated request
-- [ ] Authorization for this tutorial is deliberately simple, role-only: `hasRole('ADMIN')`/`hasRole('USER')` via Spring Security, no separate `Permission` entity or fine-grained resource/action model - the point of this project is module boundaries, not an authorization system, and a `Role`-only check keeps that focus without pretending the RBAC on top is more developed than it is
-- [ ] `@ApplicationModuleTest` for `auth`, booting only this module
-- [ ] Run `ModularityTests` again - still passes, since `auth` has no dependency on any other module yet
+- [x] `User`, `Role` entities (with the `role_user` join) and their repositories/services - all package-private (no `public` modifier), living entirely inside `auth`
+- [x] `ActivationToken`, `BlacklistedToken`, `PasswordResetToken` entities and repositories, package-private
+- [x] `auth.api.AuthApi` (`@NamedInterface`): the only thing other modules are allowed to depend on - a small interface exposing only what's genuinely needed elsewhere (e.g. `boolean userExists(Long userId)`), never the `User` entity itself
+- [x] `UserService`: registration (creates the user disabled, generates an `ActivationToken`, logs the activation link instead of emailing it, consistent with how outbound notifications are simulated elsewhere in this tutorial series), activation, login (issues a JWT), logout (blacklists the token's `jti`), forgot-password and reset-password
+- [x] Public routes: register, activate-account, login, forgot-password and reset-password are reachable without a token; logout and me require an authenticated caller. A registered account gets the `USER` role and stays disabled until activated
+- [x] `AdminBootstrap`: at startup, creates an enabled account with the `ADMIN` role from `APP_ADMIN_EMAIL`/`APP_ADMIN_PASSWORD` when both are set and the account does not exist yet - no default password anywhere in the code or the migrations, and nothing happens when the variables are absent
+- [x] Enumeration protection: `/auth/forgot-password` returns the identical response regardless of whether the submitted email exists, so the endpoint can't be used to discover registered accounts
+- [x] `AuthController`
+- [x] `JwtService`: issues and validates JWTs, checking the token's `jti` against `BlacklistedToken` on every authenticated request
+- [x] Authorization for this tutorial is deliberately simple, role-only: `hasRole('ADMIN')`/`hasRole('USER')` via Spring Security, no separate `Permission` entity or fine-grained resource/action model - the point of this project is module boundaries, not an authorization system, and a `Role`-only check keeps that focus without pretending the RBAC on top is more developed than it is
+- [x] `@ApplicationModuleTest` for `auth`, booting only this module
+- [x] Run `ModularityTests` again - still passes, since `auth` has no dependency on any other module yet
+
+### Notes on what was built
+
+- **Visibility**: entities, repositories, `UserService`, `JwtService` and the response records (`UserProfile`, `LoginResponse`) are `public` in Java because `impl/` and `web/` use them from sub-packages; Spring Modulith still keeps them internal to `auth`. `SecurityConfig`, `AdminBootstrap`, the entry point, the access denied handler, `UserServiceImpl`, `AuthApiImpl`, `AuthController` and the request records stay package-private.
+- **JWT without an external library**: `spring-boot-starter-security-oauth2-resource-server` (the Boot 4 name of the resource server starter) brings the Nimbus `JwtEncoder`/`JwtDecoder`. `JwtService` signs HS256 tokens (subject = account id, `roles`, `email`, a random `jti`) and implements `JwtDecoder` itself, so the resource server calls it on every bearer token and the blacklist check runs after the signature, expiry and issuer checks.
+- **Settings** live under `app.auth` in `application.yml` (`AuthProperties`): `APP_JWT_SECRET` overrides a development-only default key (at least 32 bytes, checked at startup), `APP_BASE_URL` sets the base of the logged activation link, activation links last 24h and reset tokens 15 minutes.
+- **Security chain** moved from `common` to `auth`: stateless, CSRF off, health, Swagger, `/error` and the five public auth routes open, everything else authenticated. A 401 (no, invalid, expired or revoked token) and a 403 raised by the filters both carry an `ApiResponse` error body. The `roles` claim becomes `ROLE_` authorities, and a role hierarchy makes `ADMIN` satisfy `hasRole('USER')` too. `@EnableMethodSecurity` lives in `common/MethodSecurityConfig`, shared with the other modules.
+- **Errors**: bad credentials, an inactive or a locked account answer 401 through a `ResponseStatusException` rendered by the existing `GlobalExceptionHandler`; the same message is used for an unknown email and a wrong password. A taken email and an invalid, expired or reused activation or reset token answer 422.
+- **Tokens**: activation tokens are single-use through `validated_at`; a reset token is deleted once used, and a new forgot-password request deletes the pending ones. Tokens are 32 random bytes, URL-safe Base64. The activation link and the reset token are logged at `INFO` in place of an email.
+- **Administrator**: `AdminBootstrap` (an `ApplicationRunner`) creates the `ADMIN` account from `APP_ADMIN_EMAIL`/`APP_ADMIN_PASSWORD` only when both are set; nothing is seeded otherwise.
 
 ## feature/catalog-module
 
