@@ -1,6 +1,7 @@
 package com.edgareldy.springmodulithtutorial.order;
 
 import java.math.BigDecimal;
+import org.springframework.modulith.NamedInterface;
 
 /**
  * Published once an order has been persisted; the notification module reacts to it.
@@ -20,6 +21,10 @@ import java.math.BigDecimal;
 // past tense, without knowing who listens. It carries plain values rather than the Order entity, so a
 // listener can never lazily load or modify order data, and so it can be serialized into the Event
 // Publication Registry and replayed later.
+// @NamedInterface on the type itself publishes this single record as the "events" interface of order.
+// A listening module can then declare allowedDependencies = "order :: events" and be limited to the
+// event, even though the entity and repository of order are also public types of its base package.
+@NamedInterface("events")
 public record OrderPlacedEvent(
         Long orderId,
         Long customerId,
