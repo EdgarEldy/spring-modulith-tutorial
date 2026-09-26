@@ -20,6 +20,7 @@ This document is the **complete specification** of the project: it is meant to b
 - [feature/order-module](#featureorder-module)
 - [feature/notification-module](#featurenotification-module)
 - [feature/module-documentation](#featuremodule-documentation)
+- [Architecture documentation](#architecture-documentation)
 - [Order of work](#order-of-work)
 - [Code conventions](#code-conventions)
 - [Concepts covered](#concepts-covered)
@@ -379,10 +380,36 @@ The first module that actually depends on others - this is where a boundary viol
 
 ### Tasks
 
-- [ ] `ModularityTests` extended: alongside `verify()`, call `new Documenter(modules).writeModulesAsPlantUml().writeIndividualModulesAsPlantUml()`, generating diagrams into `target/spring-modulith-docs/` on every test run
-- [ ] A Maven profile or CI step that copies the generated PlantUML output into a committed `docs/` folder on `develop`, so the architecture diagram is always current with the actual verified module graph - never hand-drawn, never manually kept in sync
-- [ ] Per-module "canvas" documentation (`Documenter`'s module canvas output): each module's public API, its dependencies, and the events it publishes/listens to, generated the same way
-- [ ] A short section added to this README (or a linked `ARCHITECTURE.md`) explaining how to regenerate the docs locally (`mvn test -Dtest=ModularityTests`) after adding a new module
+- [x] `ModularityTests` extended: alongside `verify()`, call `new Documenter(modules).writeModulesAsPlantUml().writeIndividualModulesAsPlantUml()`, generating diagrams into `target/spring-modulith-docs/` on every test run
+- [x] A Maven profile or CI step that copies the generated PlantUML output into a committed `docs/` folder on `develop`, so the architecture diagram is always current with the actual verified module graph - never hand-drawn, never manually kept in sync
+- [x] Per-module "canvas" documentation (`Documenter`'s module canvas output): each module's public API, its dependencies, and the events it publishes/listens to, generated the same way
+- [x] A short section added to this README (or a linked `ARCHITECTURE.md`) explaining how to regenerate the docs locally (`mvn test -Dtest=ModularityTests`) after adding a new module
+
+### Notes on what was built
+
+- **Generation**: `ModularityTests._02_...` calls `new Documenter(modules).writeModulesAsPlantUml().writeIndividualModulesAsPlantUml().writeModuleCanvases()` after `verify()` has validated the same model, and asserts the files exist: `components.puml`, one `module-<name>.puml` and one `module-<name>.adoc` canvas per module (the open `common` module gets them too).
+- **Committed copy**: the Maven profile `docs` (a `maven-resources-plugin` execution bound to the `test` phase, after Surefire) copies `target/spring-modulith-docs/` into the committed `docs/` folder. A profile was chosen over a CI step so that the same command works locally and never needs the CI to push commits.
+- **Published events in canvases**: Spring Modulith lists a module's published events only for types it recognizes as events, so `OrderPlacedEvent` carries the jMolecules `@DomainEvent` annotation (`jmolecules-events`, version managed by the `jmolecules-bom` of the release train Spring Modulith 2.0.7 already uses). The order canvas shows it under "Published events", the notification canvas under "Events listened to".
+- **Encoding**: Java 17 writes files in the platform charset (cp1252 on Windows), and the canvases contain non-ASCII characters, so Surefire runs the tests with `-Dfile.encoding=UTF-8`: the committed docs are identical wherever they are regenerated.
+
+## Architecture documentation
+
+The architecture documentation in [`docs/`](docs/) is generated from the code, never drawn by hand:
+
+- `docs/components.puml`: the component diagram of every module and their dependencies (PlantUML)
+- `docs/module-<name>.puml`: one diagram per module, centered on its own dependencies
+- `docs/module-<name>.adoc`: one canvas per module (AsciiDoc): base package, Spring components, named interfaces, bean references to other modules, aggregates, events published and events listened to
+
+`ModularityTests` writes them into `target/spring-modulith-docs/` on every test run, right after `ApplicationModules.verify()` has validated the same module model, so a diagram can never show a dependency the build would reject.
+
+To regenerate the committed copy, for instance after adding a module or changing a dependency:
+
+```bash
+./mvnw -Pdocs test -Dtest=ModularityTests
+git add docs/
+```
+
+`mvn test -Dtest=ModularityTests` alone refreshes `target/spring-modulith-docs/` without touching `docs/`. The `.puml` files render with any PlantUML viewer (IDE plugin, `plantuml` CLI), the `.adoc` canvases with any AsciiDoc viewer.
 
 ## Order of work
 
